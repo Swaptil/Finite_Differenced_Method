@@ -1,0 +1,227 @@
+//C++ program for different methods using classes
+by: Sushmitha Narendra Kumar - S408078
+Swapnil Patil - S379897
+Department: Aerospace Computational Engineering
+
+#include <iostream>
+#include <vector>
+#include <cmath>
+
+using namespace std;
+
+//declaration of the variables
+class HeatConductionSolver {
+
+private:
+    double D; // Diffusivity in cm^2/hr
+    double L; // Thickness of the plate in cm
+    double T_in; // Initial temperature in C
+    double T_sur; // Boundary temperature in C
+    double T_final; // Final time in hr
+
+    double h; // Spatial step size
+    double k; // Temporal step size
+    int N; // Number of grid points in space
+    int M; // Number of grid points in time
+    double mu; // Dimensionless parameter
+
+    vector<vector<double>> u; // Temperature matrix
+
+double analytical_solution(double x, double t, double L, double D, double T_in, double T_sur, int N) {
+        double sum = 0.0;
+        for (int n = 1; n <= N; n++) {
+            sum += exp(-D * pow(n * M_PI / L, 2) * t) * (1 - pow(-1, n)) * sin(n * M_PI * x / L) / (n * M_PI);
+        }
+        return T_sur + (T_in - T_sur) * sum;
+    }
+
+public:
+    HeatConductionSolver(double diffusivity, double thickness, double initialTemp,
+                         double boundaryTemp, double finalTime, double spatialStep, double temporalStep) {
+        D = diffusivity;
+        L = thickness;
+        T_in = initialTemp;
+        T_sur = boundaryTemp;
+        T_final = finalTime;
+        h = spatialStep;
+        k = temporalStep;
+
+        mu = D * k / (h * h);
+        N = static_cast<int>(L / h) + 1;
+        M = static_cast<int>(T_final / k) + 1;
+
+        u = vector<vector<double>>(M, vector<double>(N, T_in)); // Initialize matrix with initial temperature
+    }
+
+    void initializeBoundaryConditions() {
+        for (int m = 0; m < M; m++) {
+            u[m][0] = T_sur; // Left boundary condition
+            u[m][N - 1] = T_sur; // Right boundary condition
+        }
+    }
+
+/********************************************************************************************************************************
+					DU- Fort Frankel Method
+********************************************************************************************************************************/
+   
+ void solveDuFortFrankel() {
+        vector<vector<double>> u_new(M, vector<double>(N, T_in)); // Create a new matrix for updated values
+        
+        for (int m = 1; m < M; m++) {
+            for (int n = 1; n < N - 1; n++) {
+                u_new[m][n] = (1 - 2 * mu) * u[m - 1][n] + 2 * mu * (u[m][n - 1] + u[m][n + 1]);
+            }
+        }
+        
+        u = u_new; // Update the solution matrix with the new values
+    }
+
+/********************************************************************************************************************************
+					Richardson Method
+********************************************************************************************************************************/
+    
+void solveRichardson() {
+        vector<vector<double>> u_new(M, vector<double>(N, T_in)); // Create a new matrix for updated values
+
+        double alpha = mu / 2.0;
+
+        for (int m = 1; m < M; m++) {
+            for (int n = 1; n < N - 1; n++) {
+                u_new[m][n] = u[m - 1][n] + alpha * (u[m - 1][n - 1] - 2 * u[m - 1][n] + u[m - 1][n + 1]);
+            }
+        }
+        
+        u = u_new; // Update the solution matrix with the new values
+    }
+
+/********************************************************************************************************************************
+					Laasonen Method
+********************************************************************************************************************************/
+ void solveLaasonen() {
+        vector<double> a(N, -mu / 2); // Lower diagonal
+        vector<double> b(N, 1 + mu); // Main diagonal
+        vector<double> c(N, -mu / 2); // Upper diagonal
+        vector<double> d(N); // Right-hand side
+        vector<double> x(N); // Solution
+
+        for (int m = 1; m < M; m++) {
+            // Set up the coefficients of the tridiagonal system
+            for (int n = 1; n < N - 1; n++) {
+                d[n] = u[m - 1][n] + mu / 2 * (u[m - 1][n - 1] - 2 * u[m - 1][n] + u[m - 1][n + 1]);
+            }
+
+            // Modify the coefficients for the boundary conditions
+            d[1] += mu / 2 * T_sur;
+            d[N - 2] += mu / 2 * T_sur;
+
+            // Solve the tridiagonal system using Thomas algorithm
+            x[0] = x[N - 1] = T_sur; // Update the boundary conditions
+            for (int i = 2; i < N - 1; i++) {
+                double m = a[i] / b[i - 1];
+                b[i] -= m * c[i - 1];
+                d[i] -= m * d[i - 1];
+            }
+            x[N - 2] = d[N - 2] / b[N - 2];
+            for (int i = N - 3; i >= 1; i--) {
+                x[i] = (d[i] - c[i] * x[i + 1]) / b[i];
+            }
+
+            // Update the solution matrix with the new values
+            for (int n = 1; n < N - 1; n++) {
+                u[m][n] = x[n];
+            }
+        }
+    }
+/********************************************************************************************************************************
+					CrankNicolson Method
+********************************************************************************************************************************/
+void solveCrankNicolson() {
+        vector<double> a(N, -mu / 2); // Lower diagonal
+        vector<double> b(N, 1 + mu); // Main diagonal
+        vector<double> c(N, -mu / 2); // Upper diagonal
+        vector<double> d(N); // Right-hand side
+        vector<double> x(N); // Solution
+
+        for (int m = 1; m < M; m++) {
+            // Set up the coefficients of the tridiagonal system
+            for (int n = 1; n < N - 1; n++) {
+                d[n] = u[m - 1][n] + mu / 2 * (u[m - 1][n - 1] - 2 * u[m - 1][n] + u[m - 1][n + 1]);
+            }
+
+            // Modify the coefficients for the boundary conditions
+            d[1] += mu / 2 * T_sur;
+            d[N - 2] += mu / 2 * T_sur;
+
+            // Solve the tridiagonal system using Thomas algorithm
+            x[0] = x[N - 1] = T_sur; // Update the boundary conditions
+            for (int i = 2; i < N - 1; i++) {
+                double m = a[i] / b[i - 1];
+                b[i] -= m * c[i - 1];
+                d[i] -= m * d[i - 1];
+            }
+            x[N - 2] = d[N - 2] / b[N - 2];
+            for (int i = N - 3; i >= 1; i--) {
+                x[i] = (d[i] - c[i] * x[i + 1]) / b[i];
+            }
+
+            // Update the solution matrix with the new values
+            for (int n = 1; n < N - 1; n++) {
+                u[m][n] = x[n];
+            }
+        }
+    }
+/********************************************************************************************************************************
+					Analytical solution
+********************************************************************************************************************************/
+void solveAnalyticalSolution() {
+        // Compute the analytical solution and store it in the temperature matrix
+        for (int m = 0; m < M; ++m) {
+            double t = m * k;
+            for (int n = 0; n < N; ++n) {
+                double x = n * h;
+                u[m][n] = analytical_solution(x, t, L, D, T_in, T_sur, 100); // Assuming N = 100 in analytical solution
+            }
+        }
+    }
+
+  
+  void printSolution() {
+        // Print the solution
+        for (int m = 0; m < M; ++m) {
+            cout << "Time step: " << m * k << " hr" << endl;
+            for (int n = 0; n < N; ++n) {
+                cout << u[m][n] << " ";
+            }
+            cout << endl;
+        }
+    }
+};
+
+int main() {
+    HeatConductionSolver solver(93.0, 31.0, 38.0, 149.0, 10.0, 0.05, 0.01);
+
+    solver.initializeBoundaryConditions();
+    solver.solveDuFortFrankel();
+    solver.printSolution();
+
+    solver.initializeBoundaryConditions(); // Reset boundary conditions
+    solver.solveRichardson();
+    solver.printSolution();
+    
+    solver.initializeBoundaryConditions();
+    solver.solveLaasonen();
+    solver.printSolution();
+   
+    solver.initializeBoundaryConditions();
+    solver.solveCrankNicolson();
+    solver.printSolution();
+
+    solver.initializeBoundaryConditions();
+    solver.solveAnalyticalSolution();
+    solver.printSolution();
+
+
+    return 0;
+}
+
+
