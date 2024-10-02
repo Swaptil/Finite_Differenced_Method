@@ -133,6 +133,3 @@ For the Richardson method, study the accuracy and stability by analyzing how the
 
 This project provides a comprehensive implementation of numerical methods for solving the 1D heat diffusion equation. The results are compared with the analytical solution to validate the accuracy of each method. The program also allows exploration of the stability and accuracy of explicit vs implicit methods.
 
----
-
-This version will work fine in a plain text file. Let me know if you'd like further adjustments!
