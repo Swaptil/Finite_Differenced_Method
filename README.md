@@ -129,7 +129,5 @@ To investigate the effect of step size on the accuracy and computation time of t
 
 For the Richardson method, study the accuracy and stability by analyzing how the solution converges with smaller time steps. This is essential for understanding the limitations of the explicit methods used.
 
- Conclusion
-
-This project provides a comprehensive implementation of numerical methods for solving the 1D heat diffusion equation. The results are compared with the analytical solution to validate the accuracy of each method. The program also allows exploration of the stability and accuracy of explicit vs implicit methods.
+The results are compared with the analytical solution to validate the accuracy of each method. The program also allows exploration of the stability and accuracy of explicit vs implicit methods.
 
